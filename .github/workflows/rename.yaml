@@ -1,0 +1,89 @@
+name: rename
+
+# abap2UI5 and its frontend (abap2UI5/frontend-new) renamed into the given
+# namespace and pushed to the branch rename_<name> of this repository, as one
+# abapGit repository: pull that branch into a package and the whole renamed
+# stack is installed. The renaming is rename.mjs (see its header); this
+# workflow only runs it and pushes what it wrote.
+#
+# Re-running with the same name updates the branch; the branch history is
+# one commit per run, parented on the previous one.
+
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: "New name: a customer name (ZABAP2UI5Z, max. 10 characters) or a registered namespace with both slashes (/ABAP2UI5/, max. 10)"
+        required: true
+        type: string
+      abap2ui5_ref:
+        description: "Branch or tag of abap2UI5/abap2UI5 to rename"
+        required: false
+        type: string
+        default: main
+      frontend_ref:
+        description: "Branch or tag of abap2UI5/frontend-new to rename"
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rename-${{ inputs.namespace }}
+  cancel-in-progress: false
+
+jobs:
+  rename:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      NAMESPACE: ${{ inputs.namespace }}
+      ABAP2UI5_REF: ${{ inputs.abap2ui5_ref }}
+      FRONTEND_REF: ${{ inputs.frontend_ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      # The inputs reach a shell, so they are checked before anything runs;
+      # rename.mjs validates the name once more and derives the branch
+      - name: Rename
+        id: rename
+        run: |
+          set -euo pipefail
+          for v in "$NAMESPACE" "$ABAP2UI5_REF" "$FRONTEND_REF"; do
+            if ! printf '%s' "$v" | grep -Eq '^[A-Za-z0-9_./#-]+$'; then
+              echo "::error::invalid input '$v'"
+              exit 1
+            fi
+          done
+          node rename.mjs "$NAMESPACE" --abap2ui5-ref "$ABAP2UI5_REF" --frontend-ref "$FRONTEND_REF"
+
+      - name: Push branch ${{ steps.rename.outputs.branch }}
+        env:
+          BRANCH: ${{ steps.rename.outputs.branch }}
+          OUT: ${{ steps.rename.outputs.out }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git fetch origin "$BRANCH" --depth 1 2>/dev/null || true
+          parent=$(git rev-parse -q --verify "refs/remotes/origin/$BRANCH" || true)
+          index="$RUNNER_TEMP/index-$BRANCH"
+          rm -f "$index"
+          (cd "$OUT" && GIT_DIR="$GITHUB_WORKSPACE/.git" GIT_WORK_TREE=. GIT_INDEX_FILE="$index" git add -A)
+          tree=$(GIT_INDEX_FILE="$index" git write-tree)
+          if [ -n "$parent" ] && [ "$(git rev-parse "$parent^{tree}")" = "$tree" ]; then
+            echo "$BRANCH: no changes"
+            exit 0
+          fi
+          commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "rename: $NAMESPACE (abap2UI5 $ABAP2UI5_REF, frontend-new $FRONTEND_REF)")
+          git push origin "$commit:refs/heads/$BRANCH"
+          echo "$BRANCH: pushed $commit"

@@ -1,0 +1,18 @@
+{
+  "name": "abap2ui5-test-build",
+  "private": true,
+  "version": "0.1.0",
+  "description": "abap2UI5 and its frontend renamed into a namespace of your choice, as one abapGit repository on a branch of this repository",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "rename": "node rename.mjs",
+    "check": "node rename.mjs --help >/dev/null && node --test \"test/*.test.mjs\"",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "devDependencies": {
+    "@abaplint/cli": "^2.120.71"
+  }
+}
