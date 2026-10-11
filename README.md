@@ -14,21 +14,22 @@ installs everything under a registered namespace.
 
 **GitHub**: Actions → `rename` → Run workflow → enter the name. The result is
 pushed to `rename_<name>`; re-running with the same name updates that branch.
-Optionally a branch or tag of abap2UI5 and of frontend-new to rename.
+Optionally a branch or tag of abap2UI5 and of the frontend to rename.
 
 **Locally**:
 
 ```bash
 npm ci
 node rename.mjs /abap2ui5/                 # clones both repositories into work/, result in out/rename_abap2ui5/
-node rename.mjs zabap2ui5z --abap2ui5 ../abap2UI5 --frontend ../frontend-new   # existing checkouts
+node rename.mjs zabap2ui5z --abap2ui5 ../abap2UI5 --frontend ../frontend   # existing checkouts (frontend on standard_new)
 ```
 
 ## What it does
 
-1. Clones [abap2UI5/abap2UI5](https://github.com/abap2UI5/abap2UI5) and
-   [abap2UI5/frontend-new](https://github.com/abap2UI5/frontend-new) (`main`
-   by default).
+1. Clones [abap2UI5/abap2UI5](https://github.com/abap2UI5/abap2UI5) (`main`)
+   and the branch `standard_new` of [abap2UI5/frontend](https://github.com/abap2UI5/frontend)
+   - the frontend app around the embed control, which loads the abap2UI5
+   frontend from the backend.
 2. Renames the backend with abap2UI5's own rename config
    (`.github/abaplint/rename.jsonc`, what its `build-rename` workflow uses):
    `abaplint --rename` turns every `z2ui5_*` class, interface and table into

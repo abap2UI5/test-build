@@ -1,6 +1,6 @@
 name: rename
 
-# abap2UI5 and its frontend (abap2UI5/frontend-new) renamed into the given
+# abap2UI5 and its frontend (abap2UI5/frontend, branch standard_new) renamed into the given
 # namespace and pushed to the branch rename_<name> of this repository, as one
 # abapGit repository: pull that branch into a package and the whole renamed
 # stack is installed. The renaming is rename.mjs (see its header); this
@@ -22,10 +22,10 @@ on:
         type: string
         default: main
       frontend_ref:
-        description: "Branch or tag of abap2UI5/frontend-new to rename"
+        description: "Branch or tag of abap2UI5/frontend to rename"
         required: false
         type: string
-        default: main
+        default: standard_new
 
 permissions:
   contents: read
@@ -84,6 +84,6 @@ jobs:
             echo "$BRANCH: no changes"
             exit 0
           fi
-          commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "rename: $NAMESPACE (abap2UI5 $ABAP2UI5_REF, frontend-new $FRONTEND_REF)")
+          commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "rename: $NAMESPACE (abap2UI5 $ABAP2UI5_REF, frontend $FRONTEND_REF)")
           git push origin "$commit:refs/heads/$BRANCH"
           echo "$BRANCH: pushed $commit"

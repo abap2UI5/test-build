@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-// rename.mjs - abap2UI5 and its frontend (abap2UI5/frontend-new) renamed into
+// rename.mjs - abap2UI5 and its frontend (abap2UI5/frontend, branch standard_new) renamed into
 // a namespace of your choice, assembled as ONE abapGit repository.
 //
 //   node rename.mjs /abap2ui5/            registered namespace  -> /abap2ui5/cl_ui5_client, BSP /ABAP2UI5/UI5
 //   node rename.mjs zabap2ui5z            customer name         -> zabap2ui5z_cl_ui5_client, BSP ZABAP2UI5Z
 //
 // What happens:
-//   1. abap2UI5/abap2UI5 and abap2UI5/frontend-new are cloned (main, or the
-//      --abap2ui5-ref / --frontend-ref given) into work/
+//   1. abap2UI5/abap2UI5 (main) and abap2UI5/frontend (branch standard_new -
+//      the frontend app around the embed control) are cloned into work/, or
+//      the --abap2ui5-ref / --frontend-ref given
 //   2. the backend is renamed with abap2UI5's own rename config
 //      (.github/abaplint/rename.jsonc, the one its build-rename workflow
 //      uses): abaplint --rename rewrites every z2ui5_* object and every
@@ -16,11 +17,11 @@
 //   3. the frontend BSP is renamed with abap2UI5's tools/bsp_rename
 //      (BSP, ICF nodes, SMIM, handler class, file names; for a /NS/ the nodes
 //      move to /sap/bc/<ns>/ui5 and the namespace-level nodes are generated).
-//      Two things that script keeps on purpose are rewritten here, because
+//      One thing that script keeps on purpose is rewritten here, because
 //      here the backend IS renamed: the handler's call of the backend class
-//      (z2ui5_cl_ui5_http_handler -> <prefix>cl_ui5_http_handler) and the
-//      endpoint the embed control loads the frontend from (its default is
-//      /sap/bc/z2ui5; the renamed node is set on the control in the view)
+//      (z2ui5_cl_ui5_http_handler -> <prefix>cl_ui5_http_handler). The
+//      endpoint the embed control loads the frontend from is the manifest's
+//      data source, which rename-bsp repoints at the renamed node - checked
 //   4. the result lands in out/<branch>/: .abapgit.xml, LICENSE, README.md
 //      and src/ - the backend's packages 00..99 plus src/frontend/ with the
 //      frontend's 01 (handler + node) and 02 (BSP + nodes). One pull installs
@@ -36,9 +37,9 @@
 // Options:
 //   --out <dir>             where the result goes (default: out/<branch>)
 //   --abap2ui5 <path>       an existing checkout of abap2UI5/abap2UI5 instead of a clone
-//   --frontend <path>       an existing checkout of abap2UI5/frontend-new instead of a clone
+//   --frontend <path>       an existing checkout of abap2UI5/frontend (standard_new) instead of a clone
 //   --abap2ui5-ref <ref>    branch/tag to clone (default: main)
-//   --frontend-ref <ref>    branch/tag to clone (default: main)
+//   --frontend-ref <ref>    branch/tag of abap2UI5/frontend to clone (default: standard_new)
 //   --abaplint <path>       the abaplint binary (default: this package's node_modules/.bin/abaplint)
 //
 // Needs: node >= 22, git, and `npm ci` here (for @abaplint/cli). Nothing is
@@ -52,21 +53,19 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const REPOS = {
   abap2ui5: "https://github.com/abap2UI5/abap2UI5.git",
-  frontend: "https://github.com/abap2UI5/frontend-new.git",
+  frontend: "https://github.com/abap2UI5/frontend.git",
 };
 const OLD = "z2ui5";
-// the backend classes a frontend handler may call: frontend-new calls the
+// the backend classes a frontend handler may call: standard_new calls the
 // public z2ui5_cl_ui5_http_handler, abap2UI5/frontend the frozen
 // z2ui5_cl_http_handler of src/99 (an empty subclass, renamed as well)
 const BACKEND_CALL = /z2ui5_cl_(ui5_)?http_handler/gi;
-// abapGit stores a BSP page with every line padded to 255 characters
-const BSP_LINE_WIDTH = 255;
 
 // ---------------------------------------------------------------------------
 // arguments
 // ---------------------------------------------------------------------------
 function parseArgs(argv) {
-  const o = { name: null, out: null, abap2ui5: null, frontend: null, abap2ui5Ref: "main", frontendRef: "main", abaplint: null };
+  const o = { name: null, out: null, abap2ui5: null, frontend: null, abap2ui5Ref: "main", frontendRef: "standard_new", abaplint: null };
   const valued = { "--out": "out", "--abap2ui5": "abap2ui5", "--frontend": "frontend", "--abap2ui5-ref": "abap2ui5Ref", "--frontend-ref": "frontendRef", "--abaplint": "abaplint" };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -168,20 +167,6 @@ function head(checkout) {
   }
 }
 
-// Re-pad a BSP page after an edit: only lines that are not 255 wide are the
-// edited ones; an over-long one is wrapped into 255-character chunks the way
-// abap2UI5's app2bsp writes them. No trailing newline, as stored.
-function repadBspPage(content) {
-  const out = [];
-  for (const line of content.split("\n")) {
-    if (line.length === BSP_LINE_WIDTH) { out.push(line); continue; }
-    const text = line.replace(/ +$/, "");
-    if (!text) { out.push("".padEnd(BSP_LINE_WIDTH)); continue; }
-    for (let o = 0; o < text.length; o += BSP_LINE_WIDTH) out.push(text.slice(o, o + BSP_LINE_WIDTH).padEnd(BSP_LINE_WIDTH));
-  }
-  return out.join("\n");
-}
-
 // ---------------------------------------------------------------------------
 // 2. the backend
 // ---------------------------------------------------------------------------
@@ -242,27 +227,26 @@ function renameFrontend(N, feCheckout, abap2ui5Checkout, work) {
   if (handlers !== 1) throw new Error(`expected exactly one handler class calling the backend, found ${handlers}`);
   console.log(`   handler calls ${N.prefix}cl_ui5_http_handler`);
 
-  // the endpoint the embed control loads the frontend from: its default is
-  // /sap/bc/z2ui5, the renamed node is set on the control in the view page
-  const views = [...walk(join(stage, "src"))].filter((p) => p.endsWith(".wapa.view_-main.view.xml"));
-  if (views.length !== 1) throw new Error(`expected one main view page, found ${views.length}`);
-  const view = views[0];
-  const page = readFileSync(view, "utf8");
-  if (/\bendpoint=/.test(page)) throw new Error(`${basename(view)}: the control already has an endpoint - frontend-new changed`);
-  const lines = page.split("\n");
-  const at = lines.findIndex((l) => /<z2ui5:Container\s*$/.test(l));
-  if (at < 0) throw new Error(`${basename(view)}: <z2ui5:Container not found`);
-  const indent = (lines[at + 1].match(/^ */) ?? [""])[0];
-  lines.splice(at + 1, 0, `${indent}endpoint="${N.endpoint}"`);
-  writeFileSync(view, repadBspPage(lines.join("\n")));
-  console.log(`   control endpoint ${N.endpoint}`);
+  // the endpoint the embed control loads the frontend from: the app reads
+  // it from the manifest's data source (sap.app/dataSources/http/uri), which
+  // rename-bsp has repointed at the renamed handler node - verified here, a
+  // frontend that reads it from elsewhere would silently keep /sap/bc/z2ui5
+  const manifests = [...walk(join(stage, "src"))].filter((p) => p.endsWith(".wapa.manifest.json"));
+  if (manifests.length !== 1) throw new Error(`expected one manifest page, found ${manifests.length}`);
+  const manifest = readFileSync(manifests[0], "utf8");
+  const uri = /"uri":\s*"([^"]+)"/.exec(manifest)?.[1];
+  if (uri !== N.endpoint) {
+    throw new Error(`${basename(manifests[0])}: data source uri is ${uri ?? "missing"}, expected ${N.endpoint} - the frontend changed`);
+  }
+  if (/\/sap\/bc\/z2ui5\b/.test(manifest)) throw new Error(`${basename(manifests[0])}: still names /sap/bc/z2ui5`);
+  console.log(`   control endpoint ${N.endpoint} (manifest data source)`);
   return join(stage, "src");
 }
 
 // ---------------------------------------------------------------------------
 // 4. the result
 // ---------------------------------------------------------------------------
-function assemble(N, out, backend, frontendSrc, abap2ui5Checkout, feCheckout) {
+function assemble(N, out, backend, frontendSrc, abap2ui5Checkout, feCheckout, frontendRef) {
   console.log(`\n== assemble ${out}`);
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
@@ -288,7 +272,7 @@ Generated by [abap2UI5/test-build](https://github.com/abap2UI5/test-build) - do 
 | | |
 |---|---|
 | backend | abap2UI5/abap2UI5@${a}, every \`z2ui5_*\` object renamed to \`${N.prefix}*\` |
-| frontend | abap2UI5/frontend-new@${f}, BSP \`${bsp}\`, handler \`${handler}\` calling \`${N.prefix}cl_ui5_http_handler\` |
+| frontend | abap2UI5/frontend@${f} (${frontendRef}), BSP \`${bsp}\`, handler \`${handler}\` calling \`${N.prefix}cl_ui5_http_handler\` |
 | \`src/\` | the backend (packages 00..99) |
 | \`src/frontend/\` | the frontend: \`01\` handler and ICF node, \`02\` BSP and its nodes |
 
@@ -323,10 +307,10 @@ function main() {
   const work = join(here, "work");
   mkdirSync(work, { recursive: true });
   let abap2ui5 = o.abap2ui5 ? resolve(o.abap2ui5) : join(work, "abap2UI5");
-  let frontend = o.frontend ? resolve(o.frontend) : join(work, "frontend-new");
+  let frontend = o.frontend ? resolve(o.frontend) : join(work, "frontend");
   if (!o.abap2ui5) clone(REPOS.abap2ui5, o.abap2ui5Ref, abap2ui5);
   if (!o.frontend) clone(REPOS.frontend, o.frontendRef, frontend);
-  for (const [what, dir, marker] of [["abap2UI5", abap2ui5, ".github/abaplint/rename.jsonc"], ["frontend-new", frontend, "src/01"]]) {
+  for (const [what, dir, marker] of [["abap2UI5", abap2ui5, ".github/abaplint/rename.jsonc"], ["frontend (standard_new)", frontend, "src/01"]]) {
     if (!existsSync(join(dir, marker))) fail(`${dir} is not a checkout of abap2UI5/${what} (${marker} missing)`);
   }
 
@@ -334,7 +318,7 @@ function main() {
   const out = o.out ? resolve(o.out) : join(here, "out", N.branch);
   const backend = renameBackend(N, abap2ui5, abaplint);
   const frontendSrc = renameFrontend(N, frontend, abap2ui5, work);
-  assemble(N, out, backend, frontendSrc, abap2ui5, frontend);
+  assemble(N, out, backend, frontendSrc, abap2ui5, frontend, o.frontend ? "checkout" : o.frontendRef);
   console.log(`\nOK: ${out}  (branch ${N.branch})`);
   // for the workflow
   if (process.env.GITHUB_OUTPUT) {
