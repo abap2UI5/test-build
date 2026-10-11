@@ -43,8 +43,9 @@ node rename.mjs zabap2ui5z --abap2ui5 ../abap2UI5 --frontend ../frontend   # exi
    and the endpoint the embed control loads the frontend from (set on the
    control in the view, the renamed node).
 4. Assembles `.abapgit.xml`, `LICENSE`, a `README.md` with the install steps
-   and `src/`: the backend's packages `00`..`99` plus `src/frontend/` with the
-   frontend's `01` (handler and node) and `02` (BSP and nodes).
+   and `src/` with two folders: `src/01` the backend (its packages `00`..`99`
+   below it) and `src/02` the frontend (`01` handler and node, `02` BSP and
+   nodes).
 
 Rules for the name are abap2UI5's: a customer name has at most 10 characters,
 a registered namespace at most 10 with both slashes (every abap2UI5 object
@@ -56,9 +57,9 @@ name is at most 25 characters, so the renamed one stays within ABAP's 30).
 
 abapGit → New Online → this repository, branch `rename_<name>` → a package of
 yours (in the namespace, for a `/NS/` name) → Pull. Then activate the ICF nodes
-the branch's README lists and open its `index.html`. The frontend packages are
-`<package>_FRONTEND`, `_FRONTEND_01`, `_FRONTEND_02` (abapGit's PREFIX folder
-logic).
+the branch's README lists and open its `index.html`. The packages are `<package>_01`
+(backend, with `_01_00` .. `_01_99`) and `<package>_02` (frontend, with
+`_02_01`, `_02_02`) - abapGit's PREFIX folder logic.
 
 ## Checks
 
