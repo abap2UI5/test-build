@@ -37,11 +37,12 @@ node rename.mjs zabap2ui5z --abap2ui5 ../abap2UI5 --frontend ../frontend   # exi
    then proves no string literal still names an object by its old name.
 3. Renames the frontend BSP with abap2UI5's `tools/bsp_rename` (BSP, ICF
    nodes, SMIM folder, handler class, file names; for a `/NS/` the nodes move
-   to `/sap/bc/<ns>/ui5` and the namespace-level nodes are generated). Two
-   things that script keeps for an unrenamed backend are rewritten here:
-   the handler's call of the backend class (`<prefix>cl_ui5_http_handler`)
-   and the endpoint the embed control loads the frontend from (set on the
-   control in the view, the renamed node).
+   to `/sap/bc/<ns>/ui5` and the namespace-level nodes are generated). The
+   one thing that script keeps for an unrenamed backend is rewritten here:
+   the handler's call of the backend class (`<prefix>cl_ui5_http_handler`).
+   The endpoint the embed control loads the frontend from is the manifest's
+   data source, which the script repoints at the renamed node - checked
+   here, so a frontend that takes it from elsewhere stops the run.
 4. Assembles `.abapgit.xml`, `LICENSE`, a `README.md` with the install steps
    and `src/` with two folders: `src/01` the backend (its packages `00`..`99`
    below it) and `src/02` the frontend (`01` handler and node, `02` BSP and
