@@ -168,6 +168,16 @@ function head(checkout) {
   }
 }
 
+// abaplint writes <output>/<absolute path of the checkout>/src. Asked by that
+// path first: the first folder named src below <output> is a folder of the
+// checkout's own path when that path has one (~/src/abap2UI5), and the
+// result would then nest the whole tree one level too deep
+export function renamedSrc(output, checkout) {
+  const exact = join(output, resolve(checkout), "src");
+  if (existsSync(exact)) return exact;
+  return findDir(output, "src");
+}
+
 // ---------------------------------------------------------------------------
 // 2. the backend
 // ---------------------------------------------------------------------------
@@ -187,8 +197,7 @@ function renameBackend(N, checkout, abaplint) {
   run(abaplint, [cfg, "--rename"], { cwd: checkout, quiet: true });
   rmSync(cfg);
 
-  // abaplint writes <output>/<absolute path of the checkout>/src
-  const src = findDir(output, "src");
+  const src = renamedSrc(output, checkout);
   if (!src) throw new Error(`no renamed src folder under ${output}`);
 
   console.log("   literal gate (abap2UI5's rename-literal-gate.mjs --renamed)");
