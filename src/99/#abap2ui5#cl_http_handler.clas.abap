@@ -1,0 +1,11 @@
+CLASS /abap2ui5/cl_http_handler DEFINITION PUBLIC INHERITING FROM /abap2ui5/cl_ui5_http_handler.
+
+  PUBLIC SECTION.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+
+ENDCLASS.
+
+CLASS /abap2ui5/cl_http_handler IMPLEMENTATION.
+
+ENDCLASS.
