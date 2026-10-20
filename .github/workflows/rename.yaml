@@ -8,6 +8,11 @@ name: rename
 #
 # Re-running with the same name updates the branch; the branch history is
 # one commit per run, parented on the previous one.
+#
+# rename.mjs also runs abaplint on the result (the branch's own
+# abaplint.jsonc) and writes the outcome to .badges/abaplint.json, the badge
+# of the branch README. The branch is pushed either way, so the badge always
+# shows the state of the branch; issues fail the run after the push.
 
 on:
   workflow_dispatch:
@@ -87,3 +92,14 @@ jobs:
           commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "rename: $NAMESPACE (abap2UI5 $ABAP2UI5_REF, frontend $FRONTEND_REF)")
           git push origin "$commit:refs/heads/$BRANCH"
           echo "$BRANCH: pushed $commit"
+
+      - name: abaplint
+        env:
+          BRANCH: ${{ steps.rename.outputs.branch }}
+          ISSUES: ${{ steps.rename.outputs.issues }}
+        run: |
+          echo "abaplint on $BRANCH: $ISSUES issue(s)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ISSUES" != "0" ]; then
+            echo "::error::abaplint found $ISSUES issue(s) on $BRANCH - see the Rename step"
+            exit 1
+          fi

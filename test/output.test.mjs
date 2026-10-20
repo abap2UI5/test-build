@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { renamedSrc } from "../rename.mjs";
+import { badge, lintConfig, renamedSrc } from "../rename.mjs";
 
 // abaplint --rename writes <output>/<absolute path of the checkout>/src; a
 // checkout whose own path has a folder named src (~/src/abap2UI5) must not
@@ -29,4 +29,19 @@ test("no renamed src at all", () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+// the branch's own config and the shields.io endpoint of its badge
+test("the lint config of the result", () => {
+  const cfg = JSON.parse(lintConfig());
+  assert.equal(cfg.global.files, "/src/**/*.*");
+  assert.equal(cfg.syntax.errorNamespace, ".");
+  assert.ok(cfg.dependencies.every((d) => d.folder.startsWith("/deps/")));
+});
+
+test("the badge", () => {
+  assert.deepEqual(JSON.parse(badge(0)), { schemaVersion: 1, label: "abaplint", message: "passing", color: "brightgreen" });
+  assert.equal(JSON.parse(badge(1)).message, "1 issue");
+  assert.equal(JSON.parse(badge(3)).message, "3 issues");
+  assert.equal(JSON.parse(badge(3)).color, "red");
 });

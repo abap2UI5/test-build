@@ -7,6 +7,7 @@ installs everything under a registered namespace.
 
 | Input | Backend objects | Frontend BSP | Branch |
 |---|---|---|---|
+| `/CA2UI5/` | `/ca2ui5/cl_ui5_client`, ... | `/CA2UI5/UI5`, node `/sap/bc/ca2ui5/ui5` | `rename_ca2ui5` |
 | `/ABAP2UI5/` | `/abap2ui5/cl_ui5_client`, ... | `/ABAP2UI5/UI5`, node `/sap/bc/abap2ui5/ui5` | `rename_abap2ui5` |
 | `ZABAP2UI5Z` | `zabap2ui5z_cl_ui5_client`, ... | `ZABAP2UI5Z`, node `/sap/bc/zabap2ui5z` | `rename_zabap2ui5z` |
 
@@ -47,12 +48,24 @@ node rename.mjs zabap2ui5z --abap2ui5 ../abap2UI5 --frontend ../frontend   # exi
    and `src/` with two folders: `src/01` the backend (its packages `00`..`99`
    below it) and `src/02` the frontend (`01` handler and node, `02` BSP and
    nodes).
+5. Runs abaplint on the result with the `abaplint.jsonc` it writes to the
+   branch (syntax v750, the API abap2UI5 is checked against plus
+   [abaplint/deps](https://github.com/abaplint/deps) for the frontend
+   handler's on-premise interfaces). The outcome is the badge of the branch
+   README (`.badges/abaplint.json`, a shields.io endpoint). The branch is
+   pushed either way; issues fail the workflow run after the push.
 
 Rules for the name are abap2UI5's: a customer name has at most 10 characters,
 a registered namespace at most 10 with both slashes (every abap2UI5 object
 name is at most 25 characters, so the renamed one stays within ABAP's 30).
 `z2ui5` is refused. A `/NS/` namespace has to exist in the target system
 (SE03) before the pull.
+
+## Branches
+
+| Branch | abaplint |
+|---|---|
+| [`rename_ca2ui5`](https://github.com/abap2UI5/test-build/tree/rename_ca2ui5) | ![abaplint](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fabap2UI5%2Ftest-build%2Frename_ca2ui5%2F.badges%2Fabaplint.json) |
 
 ## Install the result
 
@@ -65,5 +78,5 @@ the branch's README lists and open its `index.html`. The packages are `<package>
 ## Checks
 
 ```bash
-npm test      # the name derivation
+npm test      # the name derivation, the lint config and the badge
 ```
