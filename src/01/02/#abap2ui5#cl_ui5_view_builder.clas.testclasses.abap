@@ -201,7 +201,7 @@ CLASS ltcl_builder IMPLEMENTATION.
     " legacy long text: illegal in XML 1.0 even as a character reference,
     " the whole view failed at the parser - they are dropped, the legal
     " whitespace next to them still becomes its character reference. NUL
-    " was missing from the set the comment in xml_escape names
+    " was missing from the set the comment in z2ui5_cl_ui5_util_context=>c_escape_xml names
     DATA(lv_ctrl) = /abap2ui5/cl_ui5_util_context=>conv_get_string_by_xstring( CONV xstring( `000C1E` ) ).
     DATA(view) = /abap2ui5/cl_ui5_view_builder=>factory( ).
 
@@ -472,7 +472,7 @@ CLASS ltcl_builder IMPLEMENTATION.
     " view died in the browser far from the line that wrote it
     DATA lt_bad TYPE string_table.
     lt_bad = VALUE #( ( `te(xt` ) ( `te,xt` ) ( `te;xt` ) ( `te{xt` ) ( `te!xt` )
-                      ( `1st` ) ( `.text` ) ( `-text` ) ).
+                      ( `1st` ) ( `.text` ) ( `-text` ) ( `:text` ) ).
 
     LOOP AT lt_bad INTO DATA(lv_bad).
       DATA(view) = /abap2ui5/cl_ui5_view_builder=>factory( )->ele( `Panel` ).
@@ -517,6 +517,16 @@ CLASS ltcl_builder IMPLEMENTATION.
       CATCH /abap2ui5/cx_ui5_util_error INTO DATA(lx).
         cl_abap_unit_assert=>assert_true( act = xsdbool( lx->get_text( ) CS `namespace prefix` )
                                           msg = lx->get_text( ) ).
+    ENDTRY.
+
+    " nor may the name bring a prefix of its own beside ns - `core:x:Icon`
+    TRY.
+        /abap2ui5/cl_ui5_view_builder=>factory( )->ele( n  = `x:Icon`
+                                                    ns = `core` ).
+        cl_abap_unit_assert=>fail( `a prefixed name beside ns must raise` ).
+      CATCH /abap2ui5/cx_ui5_util_error INTO DATA(lx_name).
+        cl_abap_unit_assert=>assert_true( act = xsdbool( lx_name->get_text( ) CS `carries a prefix` )
+                                          msg = lx_name->get_text( ) ).
     ENDTRY.
 
   ENDMETHOD.

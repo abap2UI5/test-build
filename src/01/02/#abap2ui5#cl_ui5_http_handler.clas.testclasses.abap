@@ -420,7 +420,8 @@ CLASS ltcl_test_http_handler IMPLEMENTATION.
     cl_abap_unit_assert=>assert_true(
         xsdbool( ls_result-body CS `"z2ui5/Component.js": function()` ) ).
     " ...the component a second time, under the name the control creates it
-    " by when the page's own component is z2ui5 (abap2UI5/frontend-new)
+    " by when the page's own component is z2ui5 (abap2UI5/frontend, the
+    " branches standard_new and cloud_new)
     cl_abap_unit_assert=>assert_true(
         xsdbool( ls_result-body CS `"z2ui5/embed/frontend/Component.js": entries["z2ui5/Component.js"]` ) ).
     cl_abap_unit_assert=>assert_true(
@@ -721,6 +722,20 @@ CLASS ltcl_exit_injector IMPLEMENTATION.
 ENDCLASS.
 
 
+" the server object an ICF handler hands over, reduced to what factory( )
+" reads from it: a RESPONSE attribute. The request side is not touched by
+" factory( ) itself
+CLASS ltcl_server_shape DEFINITION FINAL.
+  PUBLIC SECTION.
+    DATA response TYPE REF TO object.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+CLASS ltcl_server_shape IMPLEMENTATION.
+ENDCLASS.
+
+
 CLASS ltcl_test_http_response DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION LONG.
 
@@ -757,7 +772,6 @@ CLASS ltcl_test_http_response DEFINITION FINAL
     METHODS test_cache_hit_same_config   FOR TESTING RAISING cx_static_check.
     METHODS test_get_304_on_if_none_match FOR TESTING RAISING cx_static_check.
     METHODS test_get_304_weak_tag FOR TESTING RAISING cx_static_check.
-    METHODS test_etag_match_rules FOR TESTING RAISING cx_static_check.
     METHODS test_get_no_304_on_stale_tag FOR TESTING RAISING cx_static_check.
     METHODS test_cache_control_post      FOR TESTING RAISING cx_static_check.
     METHODS test_cache_control_error     FOR TESTING RAISING cx_static_check.
@@ -793,7 +807,6 @@ CLASS ltcl_test_http_response DEFINITION FINAL
     METHODS test_style_exit_element      FOR TESTING RAISING cx_static_check.
     " the preconnect to the UI5 origin: for an absolute src only, outside
     " the hashed script
-    METHODS test_url_origin              FOR TESTING RAISING cx_static_check.
     METHODS test_preconnect_cdn          FOR TESTING RAISING cx_static_check.
     METHODS test_preconnect_relative     FOR TESTING RAISING cx_static_check.
     " the bundle: sent as JavaScript under a tag of its own, revalidated to a
@@ -804,6 +817,9 @@ CLASS ltcl_test_http_response DEFINITION FINAL
     " the frontend bundle's
     METHODS test_devtools_response       FOR TESTING RAISING cx_static_check.
     METHODS test_devtools_304            FOR TESTING RAISING cx_static_check.
+    METHODS test_factory_onprem      FOR TESTING RAISING cx_static_check.
+    METHODS test_factory_cloud       FOR TESTING RAISING cx_static_check.
+    METHODS test_factory_nothing     FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -969,43 +985,6 @@ CLASS ltcl_test_http_response IMPLEMENTATION.
     cl_abap_unit_assert=>assert_initial( mo_mock->mv_cdata ).
     cl_abap_unit_assert=>assert_equals( exp = `"1.0-11-22-33"`
                                         act = header_value( `etag` ) ).
-
-  ENDMETHOD.
-
-  METHOD test_etag_match_rules.
-
-    DATA(lv_tag) = `"1.0-11-22-33"`.
-
-    " exact, weak, listed, any, the Apache suffix - all a match
-    cl_abap_unit_assert=>assert_true( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = `"1.0-11-22-33"`
-        iv_etag   = lv_tag ) ).
-    cl_abap_unit_assert=>assert_true( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = `W/"1.0-11-22-33"`
-        iv_etag   = lv_tag ) ).
-    cl_abap_unit_assert=>assert_true( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = `"a" , "1.0-11-22-33" ,"b"`
-        iv_etag   = lv_tag ) ).
-    cl_abap_unit_assert=>assert_true( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = `*`
-        iv_etag   = lv_tag ) ).
-    cl_abap_unit_assert=>assert_true( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = `"1.0-11-22-33-gzip"`
-        iv_etag   = lv_tag ) ).
-
-    " another tag, a tag that merely starts like ours, nothing at all
-    cl_abap_unit_assert=>assert_false( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = `"1.0-99-99-99"`
-        iv_etag   = lv_tag ) ).
-    cl_abap_unit_assert=>assert_false( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = `"1.0-11-22-33-x"`
-        iv_etag   = lv_tag ) ).
-    cl_abap_unit_assert=>assert_false( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = ``
-        iv_etag   = lv_tag ) ).
-    cl_abap_unit_assert=>assert_false( /abap2ui5/cl_ui5_http_handler=>_check_etag_match(
-        iv_header = `*`
-        iv_etag   = `` ) ).
 
   ENDMETHOD.
 
@@ -1704,32 +1683,6 @@ CLASS ltcl_test_http_response IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD test_url_origin.
-
-    cl_abap_unit_assert=>assert_equals( exp = `https://sdk.openui5.org`
-                                        act = /abap2ui5/cl_ui5_http_handler=>_url_origin(
-                                                  `https://sdk.openui5.org/resources/sap-ui-cachebuster/sap-ui-core.js` ) ).
-    cl_abap_unit_assert=>assert_equals( exp = `https://cdn.example:8443`
-                                        act = /abap2ui5/cl_ui5_http_handler=>_url_origin(
-                                                  `https://cdn.example:8443/ui5/resources/sap-ui-core.js?x=1` ) ).
-    cl_abap_unit_assert=>assert_equals( exp = `http://cdn.example`
-                                        act = /abap2ui5/cl_ui5_http_handler=>_url_origin( `HTTP://cdn.example?q` ) ).
-    cl_abap_unit_assert=>assert_equals( exp = `//cdn.example`
-                                        act = /abap2ui5/cl_ui5_http_handler=>_url_origin( `//cdn.example/resources/sap-ui-core.js` ) ).
-    " the host alone, no path at all
-    cl_abap_unit_assert=>assert_equals( exp = `https://cdn.example`
-                                        act = /abap2ui5/cl_ui5_http_handler=>_url_origin( `https://cdn.example` ) ).
-    " relative: the page's own origin, nothing to announce
-    cl_abap_unit_assert=>assert_initial( /abap2ui5/cl_ui5_http_handler=>_url_origin(
-                                             `/sap/public/bc/ui5_ui5/1/resources/sap-ui-core.js` ) ).
-    cl_abap_unit_assert=>assert_initial( /abap2ui5/cl_ui5_http_handler=>_url_origin( `resources/sap-ui-core.js` ) ).
-    cl_abap_unit_assert=>assert_initial( /abap2ui5/cl_ui5_http_handler=>_url_origin( `` ) ).
-    " no host, or userinfo in front of it: nothing rather than a guess
-    cl_abap_unit_assert=>assert_initial( /abap2ui5/cl_ui5_http_handler=>_url_origin( `https:///x.js` ) ).
-    cl_abap_unit_assert=>assert_initial( /abap2ui5/cl_ui5_http_handler=>_url_origin( `https://u:p@cdn.example/x.js` ) ).
-
-  ENDMETHOD.
-
   METHOD test_preconnect_cdn.
 
     " an absolute src: the two hints, in the head, in front of the title -
@@ -1910,6 +1863,51 @@ CLASS ltcl_test_http_response IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = 200
                                         act = mo_mock->mv_status ).
     cl_abap_unit_assert=>assert_true( xsdbool( mo_mock->mv_cdata CS `<!DOCTYPE html>` ) ).
+
+  ENDMETHOD.
+
+  METHOD test_factory_onprem.
+
+    " an ICF server object: the layer-0 wrapper is built around it and its
+    " RESPONSE is kept at hand for the compression switch set_response( )
+    " flips - a server without one simply has nothing to flip
+    DATA(lo_server) = NEW ltcl_server_shape( ).
+    lo_server->response = NEW ltcl_server_shape( ).
+
+    DATA(lo_handler) = /abap2ui5/cl_ui5_http_handler=>factory( lo_server ).
+
+    cl_abap_unit_assert=>assert_bound( lo_handler->mo_server ).
+    cl_abap_unit_assert=>assert_bound( lo_handler->mo_server->mo_server_onprem ).
+    cl_abap_unit_assert=>assert_true( xsdbool( lo_handler->mo_response_onprem = lo_server->response ) ).
+
+  ENDMETHOD.
+
+  METHOD test_factory_cloud.
+
+    " the cloud pair: request and response objects, no server, so nothing
+    " on-premise to keep
+    DATA(lo_handler) = /abap2ui5/cl_ui5_http_handler=>factory( req = NEW ltcl_server_shape( )
+                                                           res = NEW ltcl_server_shape( ) ).
+
+    cl_abap_unit_assert=>assert_bound( lo_handler->mo_server ).
+    cl_abap_unit_assert=>assert_bound( lo_handler->mo_server->mo_request_cloud ).
+    cl_abap_unit_assert=>assert_bound( lo_handler->mo_server->mo_response_cloud ).
+    cl_abap_unit_assert=>assert_not_bound( lo_handler->mo_server->mo_server_onprem ).
+    cl_abap_unit_assert=>assert_not_bound( lo_handler->mo_response_onprem ).
+
+  ENDMETHOD.
+
+  METHOD test_factory_nothing.
+
+    " neither a server nor the cloud pair is a programming error of the
+    " caller, named as such
+    TRY.
+        /abap2ui5/cl_ui5_http_handler=>factory( ).
+        cl_abap_unit_assert=>fail( `factory( ) without any object must raise` ).
+      CATCH /abap2ui5/cx_ui5_util_error INTO DATA(lx).
+        cl_abap_unit_assert=>assert_char_cp( exp = `*EMPTY_HTTP_HANDLER_CALL_ERROR*`
+                                             act = lx->get_text( ) ).
+    ENDTRY.
 
   ENDMETHOD.
 

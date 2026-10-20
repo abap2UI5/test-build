@@ -3776,10 +3776,7 @@ CLASS ltcl_05_draft IMPLEMENTATION.
     FIELD-SYMBOLS <elem>  TYPE any.
 
     " S13 - the value behind mr_ref_ref->*->* is data like any other; the
-    " dref save cleared the outer reference and never restored it. Built
-    " here and not in fill( ): the NodeJS runtime cannot CREATE DATA a
-    " REF TO data object, so this one test is skipped there (see
-    " node/setup/abap_transpile.json) while the catalogue stays runnable
+    " dref save cleared the outer reference and never restored it
     CREATE DATA mo_app->mr_ref_ref TYPE REF TO data.
     ASSIGN mo_app->mr_ref_ref->* TO <inner>.
     CREATE DATA <inner> TYPE string.
@@ -4991,10 +4988,10 @@ CLASS ltcl_06_fast_json IMPLEMENTATION.
     DATA(lv_exp) = /abap2ui5/cl_ajson=>create_empty( )->set( iv_path = `/V`
                                                         iv_val   = lv_raw )->stringify( ).
     cl_abap_unit_assert=>assert_equals( exp = lv_exp
-                                        act = |\{"V":"{ /abap2ui5/cl_ui5_srv_model=>json_escape( lv_raw ) }"\}| ).
+                                        act = |\{"V":"{ /abap2ui5/cl_ui5_util_context=>c_escape_json( lv_raw ) }"\}| ).
     " nothing to escape: the text itself
     cl_abap_unit_assert=>assert_equals( exp = `plain`
-                                        act = /abap2ui5/cl_ui5_srv_model=>json_escape( `plain` ) ).
+                                        act = /abap2ui5/cl_ui5_util_context=>c_escape_json( `plain` ) ).
 
   ENDMETHOD.
 

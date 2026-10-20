@@ -15,21 +15,21 @@ CLASS /abap2ui5/cl_ui5f_preload DEFINITION
     " a digest of the script get( ) returns - every embedded frontend source
     " and the code around them - fixed at generation time. Part of the GET
     " shell's ETag (z2ui5_cl_ui5_http_handler=>_get_etag)
-    CONSTANTS build_hash TYPE string VALUE '9d6e52a3a8213de6'.
+    CONSTANTS build_hash TYPE string VALUE 'edd5e90b2e28500d'.
 
     " the same digest as a CSP hash source, without the quotes around it:
     " z2ui5_cl_ui5_http_handler=>_http_get lists it in the policy's
     " script-src, so this one inline script runs without 'unsafe-inline'.
     " It is the SHA-256 of get( ) byte for byte - a script that differs by one
     " character does not run at all, which the browser e2e legs would show
-    CONSTANTS script_hash TYPE string VALUE 'sha256-nW5So6ghPeazyHUwKJetkqaXVUOBlqI9/prmxO9oOME='.
+    CONSTANTS script_hash TYPE string VALUE 'sha256-7dXpCy4oUA1BqULFxwCQy9xt5WHpQnwpinSE99kw3d8='.
 
     " a digest of the devtools bundle get_devtools( ) returns - the files
     " of the developer tools the shell does not carry. The ETag of that
     " bundle carries it (z2ui5_cl_ui5_http_handler=>_http_get_devtools):
     " build_hash is taken over the shell's script alone and does not change
     " with them
-    CONSTANTS devtools_hash TYPE string VALUE 'f5b50c4359a45094'.
+    CONSTANTS devtools_hash TYPE string VALUE 'fd73a606a424d4b4'.
 
     CLASS-METHODS get
       RETURNING
@@ -148,6 +148,7 @@ CLASS /abap2ui5/cl_ui5f_preload IMPLEMENTATION.
              |      "z2ui5/core/ErrorView.js": function()\{{ /abap2ui5/cl_ui5f_errview_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/core/FrontendAction.js": function()\{{ /abap2ui5/cl_ui5f_frontact_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/core/Lib.js": function()\{{ /abap2ui5/cl_ui5f_lib_js=>get( ) }\},| && |\n| &&
+             |      "z2ui5/core/RootSlot.js": function()\{{ /abap2ui5/cl_ui5f_rootslot_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/core/Router.js": function()\{{ /abap2ui5/cl_ui5f_router_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/core/ScrollFocus.js": function()\{{ /abap2ui5/cl_ui5f_scrfocus_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/core/Server.js": function()\{{ /abap2ui5/cl_ui5f_server_js=>get( ) }\},| && |\n| &&
@@ -184,6 +185,7 @@ CLASS /abap2ui5/cl_ui5f_preload IMPLEMENTATION.
              |      "z2ui5/devtools/DeveloperTools.js": function()\{{ /abap2ui5/cl_ui5f_dtools_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/devtools/Help.js": function()\{{ /abap2ui5/cl_ui5f_help_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/devtools/Inspect.js": function()\{{ /abap2ui5/cl_ui5f_inspect_js=>get( ) }\},| && |\n| &&
+             |      "z2ui5/devtools/Journey.js": function()\{{ /abap2ui5/cl_ui5f_journey_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/devtools/LiveEdit.js": function()\{{ /abap2ui5/cl_ui5f_liveedit_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/devtools/Log.js": function()\{{ /abap2ui5/cl_ui5f_log_js=>get( ) }\},| && |\n| &&
              |      "z2ui5/devtools/Picker.js": function()\{{ /abap2ui5/cl_ui5f_picker_js=>get( ) }\},| && |\n| &&
