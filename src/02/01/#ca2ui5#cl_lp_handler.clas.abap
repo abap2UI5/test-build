@@ -1,0 +1,24 @@
+CLASS /CA2UI5/CL_LP_HANDLER DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+
+    INTERFACES if_http_extension.
+
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS /CA2UI5/CL_LP_HANDLER IMPLEMENTATION.
+
+  METHOD if_http_extension~handle_request.
+
+    /ca2ui5/cl_ui5_http_handler=>run( server ).
+
+  ENDMETHOD.
+
+ENDCLASS.
