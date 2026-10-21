@@ -66,6 +66,7 @@ name is at most 25 characters, so the renamed one stays within ABAP's 30).
 | Branch | abaplint |
 |---|---|
 | [`rename_ca2ui5`](https://github.com/abap2UI5/test-build/tree/rename_ca2ui5) | ![abaplint](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fabap2UI5%2Ftest-build%2Frename_ca2ui5%2F.badges%2Fabaplint.json) |
+| [`rename_abap2ui5`](https://github.com/abap2UI5/test-build/tree/rename_abap2ui5) | ![abaplint](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fabap2UI5%2Ftest-build%2Frename_abap2ui5%2F.badges%2Fabaplint.json) |
 
 ## Install the result
 
